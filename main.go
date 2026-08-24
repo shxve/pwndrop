@@ -39,7 +39,7 @@ func main() {
 		os.Exit(1)
 		return
 	}
-	svc := &core.Service{dmn}
+	svc := &core.Service{Daemon: dmn}
 
 	if len(os.Args) > 1 {
 		var ret bool = false

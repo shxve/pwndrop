@@ -77,23 +77,6 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 		log.Info("autocert: disabled")
 	}
 
-	// set up modern cipher suites
-	/*
-		tls_cfg.MinVersion = tls.VersionTLS12
-		tls_cfg.CipherSuites = []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, // Go 1.8 only
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,   // Go 1.8 only
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-
-			// Best disabled, as they don't provide Forward Secrecy,
-			// but might be necessary for some clients
-			// tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			// tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-		}*/
-
 	s.wdav, err = NewWebDav(s)
 	if err != nil {
 		return nil, err
