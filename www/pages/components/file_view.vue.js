@@ -148,6 +148,22 @@ var appFileView = Vue.component("app-file-view", {
 						</div>
 					</div>
 				</div>
+				<div class="form-group row">
+					<label for="edit-challenge" class="col-sm-3 col-form-label label-help">Require JS Challenge:
+						<i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'Serve a small JS proof-of-work interstitial before the file. Filters link-preview bots and low-budget URL sandboxes that do not run (or do not wait for) JS. Real users see a ~1s loading page.'"></i>
+					</label>
+					<div class="col-sm-9" style="padding-top:8px">
+						<input type="checkbox" id="edit-challenge" v-model="file_edit.challenge_enabled">
+					</div>
+				</div>
+				<div class="form-group row" v-if="file_edit.challenge_enabled">
+					<label for="edit-challenge-click" class="col-sm-3 col-form-label label-help">Require click to download:
+						<i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'When on, the interstitial reveals a Download button after the check completes instead of auto-firing the download.'"></i>
+					</label>
+					<div class="col-sm-9" style="padding-top:8px">
+						<input type="checkbox" id="edit-challenge-click" v-model="file_edit.challenge_require_click">
+					</div>
+				</div>
 				<hr>
 				<transition name="sub-modal-anim" mode="out-in">
 					<div class="row" v-if="file_edit.sub_progress < 100" key="uploading">
@@ -315,7 +331,9 @@ var appFileView = Vue.component("app-file-view", {
 				hit_count: 0,
 				ua_bypass: false,
 				require_token: false,
-				access_token: ""
+				access_token: "",
+				challenge_enabled: false,
+				challenge_require_click: false
             },
             server_info: {
                 disk_free: 0,
@@ -557,6 +575,8 @@ var appFileView = Vue.component("app-file-view", {
 			this.file_edit.ua_bypass = !!this.uploads[i].ua_bypass;
 			this.file_edit.require_token = !!this.uploads[i].require_token;
 			this.file_edit.access_token = this.uploads[i].access_token || "";
+			this.file_edit.challenge_enabled = !!this.uploads[i].challenge_enabled;
+			this.file_edit.challenge_require_click = !!this.uploads[i].challenge_require_click;
 			this.file_edit.sub_name = "<unknown>";
 			this.file_edit.sub_size = 0;
 			this.file_edit.sub_ctime = 0;
@@ -593,7 +613,9 @@ var appFileView = Vue.component("app-file-view", {
 						sub_name: this.file_edit.sub_name,
 						max_hits: this.file_edit.max_hits,
 						ua_bypass: this.file_edit.ua_bypass,
-						require_token: this.file_edit.require_token
+						require_token: this.file_edit.require_token,
+						challenge_enabled: this.file_edit.challenge_enabled,
+						challenge_require_click: this.file_edit.challenge_require_click
 					},
 					{
 						headers: {
@@ -619,6 +641,8 @@ var appFileView = Vue.component("app-file-view", {
 						vm.uploads[i].ua_bypass = f.ua_bypass;
 						vm.uploads[i].require_token = f.require_token;
 						vm.uploads[i].access_token = f.access_token;
+						vm.uploads[i].challenge_enabled = f.challenge_enabled;
+						vm.uploads[i].challenge_require_click = f.challenge_require_click;
 					}
 				})
 				.catch(error => {

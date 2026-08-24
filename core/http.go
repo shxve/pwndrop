@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kgretzky/pwndrop/api"
 	"github.com/kgretzky/pwndrop/log"
 	"github.com/kgretzky/pwndrop/storage"
 )
@@ -55,7 +57,7 @@ func NewHttp(srv *Server) (*Http, error) {
 func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data_dir := Cfg.GetDataDir()
 
-	from_ip := ClientIP(r)
+	from_ip := api.ClientIP(r)
 
 	if r.Method == "GET" {
 		f, status, err := s.srv.GetFile(r.URL.Path)
@@ -96,7 +98,43 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if f.RedirectPath != "" && f.RedirectPath != r.URL.Path && !f.IsPaused {
+		// JS challenge: if enabled and the request has no valid pow cookie,
+		// serve the interstitial on r.URL.Path (address bar stays stable
+		// whether the target hit UrlPath or a RedirectPath alias). A valid
+		// cookie is one-shot: we mark the nonce consumed just before we
+		// stream the payload, and skip the RedirectPath 302 so the same
+		// URL delivers both the interstitial and the file.
+		challengePassed := false
+		var powNonce string
+		if f.ChallengeEnabled {
+			passed := false
+			if ck, err := r.Cookie(api.PowCookieName); err == nil {
+				if fid, nonce, verr := api.VerifyPowCookie(ck.Value); verr == nil && fid == f.ID {
+					passed = true
+					powNonce = nonce
+				}
+			}
+			if !passed {
+				var buf bytes.Buffer
+				if err := api.RenderInterstitial(&buf, f.ID, f.ChallengeRequireClick); err != nil {
+					log.Error("http: interstitial render for %s: %v", r.URL.Path, err)
+					s.killConnection(w, 500)
+					return
+				}
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Header().Set("Cache-Control", "no-store")
+				w.WriteHeader(200)
+				w.Write(buf.Bytes())
+				return
+			}
+			challengePassed = true
+		}
+
+		// Only follow the RedirectPath alias when the challenge is off (or
+		// the target hasn't solved yet - which we returned on above). When
+		// the challenge has passed we deliver the payload at r.URL.Path so
+		// the address bar stays stable through the whole flow.
+		if !challengePassed && f.RedirectPath != "" && f.RedirectPath != r.URL.Path && !f.IsPaused {
 			log.Error("http: get: %s: redirecting to '%s' (%s)", r.URL.Path, f.RedirectPath, from_ip)
 			http.Redirect(w, r, f.RedirectPath, http.StatusFound)
 			return
@@ -113,6 +151,13 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer fo.Close()
+
+		// Mark the one-shot pow nonce spent before the write starts, so a
+		// mid-stream connection drop still counts as "used" (matches the
+		// one-shot semantics the operator picked).
+		if powNonce != "" {
+			api.MarkNonceConsumed(powNonce)
+		}
 
 		w.Header().Set("Content-Type", mime_type)
 		w.WriteHeader(200)

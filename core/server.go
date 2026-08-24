@@ -147,6 +147,7 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 	}()
 
 	go s.cleanupBlacklist()
+	api.StartChallengeSweeper()
 
 	return s, nil
 }
@@ -154,7 +155,7 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s", r.Method, r.URL.Path)
 
-	from_ip := ClientIP(r)
+	from_ip := api.ClientIP(r)
 
 	if s.isBlacklisted(from_ip) {
 		err := s.killConnection(w, -1)
@@ -184,6 +185,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, ck)
 			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+
+		// The challenge-solve endpoint must be reachable by unauthenticated
+		// visitors (interstitial page targets don't have the secret cookie);
+		// route it to the admin mux directly, before the gate.
+		if r.URL.Path == "/"+API_PATH+"/challenge/solve" {
+			s.r.ServeHTTP(w, r)
 			return
 		}
 
@@ -257,6 +266,7 @@ func (s *Server) setupRouter() {
 	sr.HandleFunc("/files/{id}/pause", api.FilePauseHandler).Methods("GET")
 	sr.HandleFunc("/files/{id}/unpause", api.FileUnpauseHandler).Methods("GET")
 	sr.HandleFunc("/files/{id}/regen_token", api.FileRegenerateTokenHandler).Methods("POST")
+	sr.HandleFunc("/challenge/solve", api.ChallengeSolveHandler).Methods("POST", "OPTIONS")
 	s.r.PathPrefix(fmt.Sprintf("%s", admin_path)).Handler(http.StripPrefix(fmt.Sprintf("%s", admin_path), http.FileServer(http.Dir(Cfg.GetAdminDir()))))
 }
 

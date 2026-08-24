@@ -223,6 +223,8 @@ func FileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	existing.RequireToken = in.RequireToken
 	// AccessToken is not settable via this endpoint; rotate it via
 	// /files/{id}/regen_token instead.
+	existing.ChallengeEnabled = in.ChallengeEnabled
+	existing.ChallengeRequireClick = in.ChallengeRequireClick
 
 	f, err := storage.FileUpdate(id, existing)
 	if err != nil {

@@ -21,6 +21,7 @@ var appFile = Vue.component("app-file", {
 			</div>
 			<div class="col clip trans" :class="{'text-dim': file.is_paused}">
 				<i v-if="file.require_token" class="fas fa-lock" style="margin-right:6px; opacity:0.7" v-tooltip:top="'Requires access token'"></i>
+				<i v-if="file.challenge_enabled" class="fas fa-shield-alt" style="margin-right:6px; opacity:0.7" v-tooltip:top="'JS challenge required'"></i>
 				<span class="title">{{ file.name }}</span>
 			</div>
             <div v-if="file.sub_file != null && !file.is_paused" class="col-auto shrink">

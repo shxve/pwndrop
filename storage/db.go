@@ -71,22 +71,33 @@ func initConfig() error {
 	o, err := ConfigGet(1)
 	if err != nil {
 		o = &DbConfig{
-			ID:          1,
-			SecretPath:  "/pwndrop",
-			RedirectUrl: "https://www.youtube.com/watch?v=oHg5SJYRHA0",
-			CookieName:  utils.GenRandomString(4),
-			CookieToken: utils.GenRandomHash(),
-			UaBlocklist: DefaultUaBlocklist,
+			ID:               1,
+			SecretPath:       "/pwndrop",
+			RedirectUrl:      "https://www.youtube.com/watch?v=oHg5SJYRHA0",
+			CookieName:       utils.GenRandomString(4),
+			CookieToken:      utils.GenRandomHash(),
+			UaBlocklist:      DefaultUaBlocklist,
+			ChallengeHmacKey: utils.GenRandomHash(),
 		}
 		_, err = ConfigCreate(o)
 		if err != nil {
 			return err
 		}
-	} else if o.UaBlocklist == nil {
-		// existing install upgrading to a version that has this field
-		o.UaBlocklist = DefaultUaBlocklist
-		if _, err := ConfigUpdate(1, o); err != nil {
-			return err
+	} else {
+		// Backfill fields added in later versions.
+		dirty := false
+		if o.UaBlocklist == nil {
+			o.UaBlocklist = DefaultUaBlocklist
+			dirty = true
+		}
+		if o.ChallengeHmacKey == "" {
+			o.ChallengeHmacKey = utils.GenRandomHash()
+			dirty = true
+		}
+		if dirty {
+			if _, err := ConfigUpdate(1, o); err != nil {
+				return err
+			}
 		}
 	}
 	log.Debug("secret_path: %s", o.SecretPath)

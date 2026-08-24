@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{{.Title}}</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#f7f7f8;color:#222;font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center}
+  .card{max-width:420px;width:calc(100% - 32px);padding:32px 28px;background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06);text-align:center}
+  .spinner{width:44px;height:44px;margin:4px auto 18px;border:3px solid #e5e7eb;border-top-color:#4b5563;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h1{font-size:18px;font-weight:600;margin:0 0 6px}
+  p{margin:0;color:#6b7280;font-size:14px}
+  .btn{display:none;margin-top:22px;padding:12px 22px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  .btn:hover{background:#1d4ed8}
+  .err{display:none;margin-top:16px;color:#b91c1c;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="spinner" id="sp"></div>
+    <h1 id="title">{{.Title}}</h1>
+    <p id="msg">{{.SpinnerText}}</p>
+    <button class="btn" id="dl" type="button">{{.ButtonText}}</button>
+    <div class="err" id="err">{{.ErrorText}}</div>
+  </div>
+</div>
+<script>
+(function(){
+  var CHALLENGE = "{{.Challenge}}";
+  var BITS      = {{.Bits}};
+  var TARGET    = location.pathname + location.search;
+  var REQCLICK  = {{.RequireClick}};
+  var SOLVE_URL = "/api/v1/challenge/solve";
+
+  function fail(){
+    document.getElementById("sp").style.display="none";
+    document.getElementById("msg").style.display="none";
+    document.getElementById("err").style.display="block";
+  }
+
+  // Cheap environment probes. Each is re-checked server-side against a sanity
+  // rule so a determined attacker can't just POST {webdriver:false,...}.
+  function probes(){
+    var p = {webdriver:false, precise:false, evalok:false, subtle:false};
+    try { p.webdriver = (navigator.webdriver === false); } catch(e){}
+    try {
+      var t = performance.now();
+      p.precise = (t !== Math.floor(t)); // jsdom returns integer ms
+    } catch(e){}
+    try { p.evalok = (eval("2+2") === 4); } catch(e){}
+    try { p.subtle = !!(window.crypto && crypto.subtle && crypto.subtle.digest); } catch(e){}
+    return p;
+  }
+
+  // Worker source: SHA-256(challenge||nonce) with BITS leading zero bits.
+  var workerSrc = [
+    'self.onmessage = async function(e){',
+    '  var c = e.data.c, bits = e.data.bits;',
+    '  var enc = new TextEncoder();',
+    '  var need = bits >>> 3, rem = bits & 7, mask = 0xff << (8 - rem) & 0xff;',
+    '  for (var n = 0; ; n++){',
+    '    var buf = enc.encode(c + n);',
+    '    var h = new Uint8Array(await crypto.subtle.digest("SHA-256", buf));',
+    '    var ok = true;',
+    '    for (var i = 0; i < need; i++){ if (h[i] !== 0){ ok = false; break; } }',
+    '    if (ok && rem){ if ((h[need] & mask) !== 0) ok = false; }',
+    '    if (ok){ postMessage({nonce: n}); return; }',
+    '    if ((n & 0x3ff) === 0){ /* yield occasionally */ await 0; }',
+    '  }',
+    '}'
+  ].join("\n");
+
+  function solve(){
+    return new Promise(function(res, rej){
+      try {
+        var w = new Worker(URL.createObjectURL(new Blob([workerSrc], {type:"application/javascript"})));
+        w.onmessage = function(e){ w.terminate(); res(e.data.nonce); };
+        w.onerror   = function(e){ w.terminate(); rej(e); };
+        w.postMessage({c: CHALLENGE, bits: BITS});
+      } catch(e){ rej(e); }
+    });
+  }
+
+  function download(){
+    if (REQCLICK) {
+      document.getElementById("sp").style.display = "none";
+      document.getElementById("msg").textContent = "{{.ReadyText}}";
+      var b = document.getElementById("dl");
+      b.style.display = "inline-block";
+      b.onclick = function(){ location.replace(TARGET); };
+    } else {
+      location.replace(TARGET);
+    }
+  }
+
+  (async function(){
+    if (!(window.crypto && crypto.subtle && window.Worker)) { fail(); return; }
+    try {
+      var nonce = await solve();
+      var r = await fetch(SOLVE_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({c: CHALLENGE, n: nonce, p: probes()})
+      });
+      if (!r.ok) { fail(); return; }
+      download();
+    } catch (e) { fail(); }
+  })();
+})();
+</script>
+</body>
+</html>

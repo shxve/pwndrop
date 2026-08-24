@@ -221,6 +221,14 @@ func (c *Config) GetUaBlocklist() []string {
 	return o.UaBlocklist
 }
 
+func (c *Config) GetChallengeHmacKey() string {
+	o, err := storage.ConfigGet(1)
+	if err != nil {
+		return ""
+	}
+	return o.ChallengeHmacKey
+}
+
 func (c *Config) Get(key string) (string, error) {
 	section, err := c.ini.GetSection(INI_SERVER)
 	if err != nil {

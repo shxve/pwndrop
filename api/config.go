@@ -25,7 +25,10 @@ func ConfigGetHandler(w http.ResponseWriter, r *http.Request) {
 		DumpResponse(w, err.Error(), http.StatusInternalServerError, API_ERROR_FILE_DATABASE_FAILED, nil)
 		return
 	}
-	DumpResponse(w, "ok", http.StatusOK, 0, o)
+	// Scrub the internal signing key before it leaves the server.
+	scrubbed := *o
+	scrubbed.ChallengeHmacKey = ""
+	DumpResponse(w, "ok", http.StatusOK, 0, &scrubbed)
 }
 
 func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +64,10 @@ func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		o.CookieName = utils.GenRandomString(4)
 		o.CookieToken = utils.GenRandomHash()
 	}
+	// Keep the challenge HMAC key stable across config updates. The
+	// admin API scrubs it out of the GET, so the client never has it to
+	// send back; if it ever did, we still ignore it here.
+	o.ChallengeHmacKey = old_cfg.ChallengeHmacKey
 
 	ret, err := storage.ConfigUpdate(1, &o)
 	if err != nil {

@@ -15,6 +15,12 @@ type DbConfig struct {
 	// them is treated exactly like an unknown-path visitor (decoy redirect
 	// + blacklist hit) even if it names a real hosted file.
 	UaBlocklist []string `json:"ua_blocklist"`
+	// ChallengeHmacKey: hex-encoded 32-byte key used to sign JS-challenge
+	// blobs and the resulting one-shot pow cookie. Auto-generated on
+	// first run; rotating it invalidates any in-flight challenges.
+	// Persisted in the DB (JSON codec) but scrubbed from API responses in
+	// api.ConfigGetHandler so it never reaches the browser.
+	ChallengeHmacKey string `json:"challenge_hmac_key,omitempty"`
 }
 
 func ConfigCreate(o *DbConfig) (*DbConfig, error) {

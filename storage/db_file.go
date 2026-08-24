@@ -37,6 +37,14 @@ type DbFile struct {
 	// time so it is ready to hand out the moment RequireToken is flipped
 	// on; the operator can rotate it any time via FileRegenerateToken.
 	AccessToken string `json:"access_token"`
+	// ChallengeEnabled: when true, GETs are served a small JS-PoW
+	// interstitial before the payload. Filters link-preview bots and
+	// low-budget URL sandboxes that don't run (or don't wait for) JS.
+	ChallengeEnabled bool `json:"challenge_enabled"`
+	// ChallengeRequireClick: when true, the interstitial reveals a
+	// Download button on successful solve instead of auto-firing the
+	// download. Ignored when ChallengeEnabled is false.
+	ChallengeRequireClick bool `json:"challenge_require_click"`
 }
 
 func FileCreate(o *DbFile) (*DbFile, error) {
