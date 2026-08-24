@@ -69,6 +69,12 @@ func StartChallengeSweeper() {
 // When the persisted config has TrustCfConnectingIP=true, the value of
 // CF-Connecting-IP wins (Cloudflare Tunnel / proxied mode); otherwise
 // falls back to net.SplitHostPort(r.RemoteAddr), IPv6-safely.
+//
+// Peer identity is NOT validated when trust is on: any client that can
+// reach pwndrop directly can spoof its real IP by setting the header.
+// Only enable TrustCfConnectingIP when pwndrop is reachable exclusively
+// through a trusted upstream (e.g. bound to 127.0.0.1 behind a
+// Cloudflare Tunnel).
 func ClientIP(r *http.Request) string {
 	if Cfg != nil && Cfg.GetTrustCfConnectingIP() {
 		if v := r.Header.Get("CF-Connecting-IP"); v != "" {
@@ -264,6 +270,17 @@ type InterstitialData struct {
 	RequireClick bool
 }
 
+// text/template is safe TODAY because every placeholder that reaches this
+// template is server-controlled and belongs to a safe alphabet: Challenge
+// is base64url ([A-Za-z0-9_-]), Bits is an int, RequireClick is a bool
+// literal, and the user-visible strings (Title, SpinnerText, ButtonText,
+// ReadyText, ErrorText) are hardcoded here in RenderInterstitial.
+//
+// TODO(phase-2): before binding any of the strings above to a JSON config
+// (à la sitekit), switch to html/template AND re-audit each interpolation
+// site's context — the template mixes HTML (<title>/<h1>), JS string
+// literals ("...")  and JS bare literals (bool/int), which require
+// different escaping rules that html/template auto-detects.
 var interstitialParsed = template.Must(
 	template.New("i").Delims("{{", "}}").Parse(interstitialTpl),
 )

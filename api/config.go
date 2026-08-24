@@ -61,6 +61,13 @@ func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		o.SecretPath = "/" + o.SecretPath
 	}
 	if o.SecretPath != old_cfg.SecretPath {
+		// Rotate the secret-path unlock cookie whenever the path changes.
+		// The new pair is DELIBERATELY returned in the response body
+		// below (not scrubbed): the admin panel needs it to know which
+		// cookie to plant on the next /secret hit. Any other consumer
+		// should treat the /config response as sensitive for this
+		// reason — it carries the same authorization material as a
+		// /secret redirect Set-Cookie.
 		o.CookieName = utils.GenRandomString(4)
 		o.CookieToken = utils.GenRandomHash()
 	}
