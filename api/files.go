@@ -44,7 +44,7 @@ func FileCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if mime_type == "" {
 		mime_type = "application/octet-stream"
 	}
-	log.Debug("upload: " + mime_type)
+	log.Debug("upload: %s", mime_type)
 
 	os.Mkdir(filepath.Join(data_dir, "files"), 0700)
 	save_path := filepath.Join(data_dir, "files", fname)

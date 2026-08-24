@@ -73,14 +73,14 @@ func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 	switch r.Question[0].Qtype {
 	case dns.TypeA:
-		log.Debug("DNS A: " + qdomain + " = " + listen_ip)
+		log.Debug("DNS A: %s = %s", qdomain, listen_ip)
 		rr := &dns.A{
 			Hdr: dns.RR_Header{Name: qdomain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300},
 			A:   net.ParseIP(listen_ip),
 		}
 		m.Answer = append(m.Answer, rr)
 	case dns.TypeNS:
-		log.Debug("DNS NS: " + qdomain)
+		log.Debug("DNS NS: %s", qdomain)
 		for _, i := range []int{1, 2} {
 			rr := &dns.NS{
 				Hdr: dns.RR_Header{Name: qdomain, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 300},
