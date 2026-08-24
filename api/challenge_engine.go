@@ -177,10 +177,10 @@ func MintPowCookie(fileID int) (string, error) {
 	return prefix + "." + sig, nil
 }
 
-// VerifyPowCookie parses the cookie, checks signature+expiry, and rejects
-// nonces that have already been consumed. Returns the file ID and the
-// nonce (so the caller can mark it consumed after a successful serve).
-func VerifyPowCookie(value string) (fileID int, nonce string, err error) {
+// parsePowCookie decodes the cookie value and verifies its HMAC + expiry.
+// It does NOT check or mutate the consumed-nonces set — callers do that
+// under the consumedMu lock so the check and the mark can be atomic.
+func parsePowCookie(value string) (fileID int, nonce string, err error) {
 	key, kerr := challengeKey()
 	if kerr != nil {
 		return 0, "", kerr
@@ -208,20 +208,43 @@ func VerifyPowCookie(value string) (fileID int, nonce string, err error) {
 	if subtle.ConstantTimeCompare([]byte(want), []byte(parts[3])) != 1 {
 		return 0, "", fmt.Errorf("bad cookie signature")
 	}
+	return fid, nonce, nil
+}
+
+// VerifyPowCookie is a read-only cookie check: verifies signature+expiry
+// and reports whether the nonce is still unspent, but does not consume it.
+// The consumed check is only advisory here — callers that must actually
+// serve should use TryConsumePowCookie instead to avoid a TOCTOU race.
+func VerifyPowCookie(value string) (fileID int, nonce string, err error) {
+	fid, n, e := parsePowCookie(value)
+	if e != nil {
+		return 0, "", e
+	}
 	consumedMu.Lock()
-	_, used := consumedNonces[nonce]
+	_, used := consumedNonces[n]
 	consumedMu.Unlock()
 	if used {
 		return 0, "", fmt.Errorf("cookie already used")
 	}
-	return fid, nonce, nil
+	return fid, n, nil
 }
 
-// MarkNonceConsumed records that this one-shot nonce has been spent.
-func MarkNonceConsumed(nonce string) {
+// TryConsumePowCookie atomically verifies the cookie AND marks its nonce
+// consumed if the verification succeeds. This is the correct call for the
+// file-serve path: two concurrent requests presenting the same cookie
+// cannot both pass, so the one-shot semantics hold under concurrency.
+func TryConsumePowCookie(value string) (fileID int, err error) {
+	fid, n, e := parsePowCookie(value)
+	if e != nil {
+		return 0, e
+	}
 	consumedMu.Lock()
-	consumedNonces[nonce] = time.Now().Add(PowCookieTTL).Unix()
-	consumedMu.Unlock()
+	defer consumedMu.Unlock()
+	if _, used := consumedNonces[n]; used {
+		return 0, fmt.Errorf("cookie already used")
+	}
+	consumedNonces[n] = time.Now().Add(PowCookieTTL).Unix()
+	return fid, nil
 }
 
 // -----------------------------------------------------------------------

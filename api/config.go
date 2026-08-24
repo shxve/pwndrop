@@ -74,5 +74,10 @@ func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		DumpResponse(w, err.Error(), http.StatusInternalServerError, API_ERROR_FILE_DATABASE_FAILED, nil)
 		return
 	}
-	DumpResponse(w, "ok", http.StatusOK, 0, ret)
+	// Same scrub as ConfigGetHandler: the signing key never leaves the
+	// server. Without this it would echo back in the response body of
+	// every "Save Settings" click.
+	scrubbed := *ret
+	scrubbed.ChallengeHmacKey = ""
+	DumpResponse(w, "ok", http.StatusOK, 0, &scrubbed)
 }

@@ -101,17 +101,16 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// JS challenge: if enabled and the request has no valid pow cookie,
 		// serve the interstitial on r.URL.Path (address bar stays stable
 		// whether the target hit UrlPath or a RedirectPath alias). A valid
-		// cookie is one-shot: we mark the nonce consumed just before we
-		// stream the payload, and skip the RedirectPath 302 so the same
-		// URL delivers both the interstitial and the file.
+		// cookie is atomically consumed the moment it verifies — same
+		// cookie presented twice (even concurrently) only serves once.
+		// We also skip the RedirectPath 302 on success so the same URL
+		// delivers both the interstitial and the file.
 		challengePassed := false
-		var powNonce string
 		if f.ChallengeEnabled {
 			passed := false
 			if ck, err := r.Cookie(api.PowCookieName); err == nil {
-				if fid, nonce, verr := api.VerifyPowCookie(ck.Value); verr == nil && fid == f.ID {
+				if fid, verr := api.TryConsumePowCookie(ck.Value); verr == nil && fid == f.ID {
 					passed = true
-					powNonce = nonce
 				}
 			}
 			if !passed {
@@ -152,12 +151,8 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		defer fo.Close()
 
-		// Mark the one-shot pow nonce spent before the write starts, so a
-		// mid-stream connection drop still counts as "used" (matches the
-		// one-shot semantics the operator picked).
-		if powNonce != "" {
-			api.MarkNonceConsumed(powNonce)
-		}
+		// (The pow nonce, if any, was already consumed atomically inside
+		// TryConsumePowCookie above — no separate mark step needed.)
 
 		w.Header().Set("Content-Type", mime_type)
 		w.WriteHeader(200)
