@@ -1,0 +1,7 @@
+.git
+.github
+build/
+release/
+*.md
+media/
+docker-compose.yml

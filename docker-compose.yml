@@ -1,0 +1,17 @@
+services:
+  pwndrop:
+    build: .
+    image: pwndrop:local
+    container_name: pwndrop
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # HTTP  (host:container)
+      - "8443:8443"   # HTTPS (self-signed in local mode)
+    volumes:
+      - pwndrop-data:/data
+    # Local mode: self-signed TLS, no port-53 nameserver.
+    # For production drop these flags, map 80/443/53, and set listen_ip in the config.
+    command: ["-config", "/data/pwndrop.ini", "-no-autocert", "-no-dns"]
+
+volumes:
+  pwndrop-data:

@@ -1,0 +1,16 @@
+# pwndrop container configuration.
+# Seeded into the /data volume on first run; edit it there to persist changes.
+# The [setup] section is consumed and removed automatically after first launch.
+
+[pwndrop]
+listen_ip  = ""
+http_port  = 8080
+https_port = 8443
+data_dir   = "/data"
+admin_dir  = "/app/admin"
+
+[setup]
+username     = "admin"
+password     = "pwndrop123"
+redirect_url = ""
+secret_path  = "/secret"
