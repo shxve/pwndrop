@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/asdine/storm"
+	"github.com/asdine/storm/v3"
 
 	"github.com/kgretzky/pwndrop/log"
 	"github.com/kgretzky/pwndrop/utils"
