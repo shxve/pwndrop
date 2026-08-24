@@ -74,6 +74,9 @@ func FileCreateHandler(w http.ResponseWriter, r *http.Request) {
 		IsEnabled:    true,
 		IsPaused:     false,
 		RefSubFile:   0,
+		// Pre-generate so the tokenized link is ready the moment the
+		// operator flips RequireToken on. Rotated via FileRegenerateToken.
+		AccessToken: utils.GenRandomHash(),
 	}
 
 	f, err := storage.FileCreate(o)
@@ -217,6 +220,9 @@ func FileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	existing.RefSubFile = in.RefSubFile
 	existing.MaxHits = in.MaxHits
 	existing.UaBypass = in.UaBypass
+	existing.RequireToken = in.RequireToken
+	// AccessToken is not settable via this endpoint; rotate it via
+	// /files/{id}/regen_token instead.
 
 	f, err := storage.FileUpdate(id, existing)
 	if err != nil {
@@ -308,6 +314,25 @@ func FileUnpauseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f, err := storage.FilePause(id, false)
+	if err != nil {
+		DumpResponse(w, err.Error(), http.StatusInternalServerError, API_ERROR_FILE_DATABASE_FAILED, nil)
+		return
+	}
+	DumpResponse(w, "ok", http.StatusOK, 0, f)
+}
+
+func FileRegenerateTokenHandler(w http.ResponseWriter, r *http.Request) {
+	if _, err := AuthSession(r); err != nil {
+		DumpResponse(w, "unauthorized", http.StatusUnauthorized, API_ERROR_BAD_AUTHENTICATION, nil)
+		return
+	}
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		DumpResponse(w, err.Error(), http.StatusBadRequest, API_ERROR_BAD_REQUEST, nil)
+		return
+	}
+	f, err := storage.FileRegenerateToken(id)
 	if err != nil {
 		DumpResponse(w, err.Error(), http.StatusInternalServerError, API_ERROR_FILE_DATABASE_FAILED, nil)
 		return

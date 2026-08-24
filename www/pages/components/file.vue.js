@@ -20,6 +20,7 @@ var appFile = Vue.component("app-file", {
                 </span>
 			</div>
 			<div class="col clip trans" :class="{'text-dim': file.is_paused}">
+				<i v-if="file.require_token" class="fas fa-lock" style="margin-right:6px; opacity:0.7" v-tooltip:top="'Requires access token'"></i>
 				<span class="title">{{ file.name }}</span>
 			</div>
             <div v-if="file.sub_file != null && !file.is_paused" class="col-auto shrink">
@@ -93,6 +94,9 @@ var appFile = Vue.component("app-file", {
 				url += ":" + l.port;
 			}
 			url += escape(this.file.url_path);
+			if (this.file.require_token && this.file.access_token) {
+				url += "?t=" + encodeURIComponent(this.file.access_token);
+			}
 			this.$refs.copyUrl.setAttribute("data-clipboard-text", url);
 		},
 		copyWebdavUrl() {

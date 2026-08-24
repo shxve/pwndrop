@@ -122,6 +122,32 @@ var appFileView = Vue.component("app-file-view", {
 						<input type="checkbox" id="edit-ua-bypass" v-model="file_edit.ua_bypass">
 					</div>
 				</div>
+				<div class="form-group row">
+					<label for="edit-require-token" class="col-sm-3 col-form-label label-help">Require Access Token:
+						<i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'If checked, download requests must carry ?t=<token>. Bad or missing tokens are treated as unknown paths (decoy redirect).'"></i>
+					</label>
+					<div class="col-sm-9" style="padding-top:8px">
+						<input type="checkbox" id="edit-require-token" v-model="file_edit.require_token">
+					</div>
+				</div>
+				<div class="form-group row" v-if="file_edit.require_token">
+					<label class="col-sm-3 col-form-label label-help">Token:</label>
+					<div class="col-sm-9">
+						<div class="input-group">
+							<input type="text" class="form-control" readonly :value="file_edit.access_token">
+							<div class="input-group-append">
+								<a class="btn-copy" ref="copyToken" href @click.prevent="copyTokenizedUrl()">
+									<button class="btn btn-outline-success" type="button" v-tooltip:top="'Copy the tokenized download URL to the clipboard'">
+										<i class="fas fa-copy"></i>
+									</button>
+								</a>
+								<button class="btn btn-outline-warning" type="button" @click.prevent="regenerateToken()" v-tooltip:top="'Generate a fresh token (invalidates the old link)'">
+									<i class="fas fa-sync-alt"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
 				<hr>
 				<transition name="sub-modal-anim" mode="out-in">
 					<div class="row" v-if="file_edit.sub_progress < 100" key="uploading">
@@ -287,7 +313,9 @@ var appFileView = Vue.component("app-file-view", {
 				wdav_path: "",
 				max_hits: 0,
 				hit_count: 0,
-				ua_bypass: false
+				ua_bypass: false,
+				require_token: false,
+				access_token: ""
             },
             server_info: {
                 disk_free: 0,
@@ -527,6 +555,8 @@ var appFileView = Vue.component("app-file-view", {
 			this.file_edit.max_hits = this.uploads[i].max_hits || 0;
 			this.file_edit.hit_count = this.uploads[i].hit_count || 0;
 			this.file_edit.ua_bypass = !!this.uploads[i].ua_bypass;
+			this.file_edit.require_token = !!this.uploads[i].require_token;
+			this.file_edit.access_token = this.uploads[i].access_token || "";
 			this.file_edit.sub_name = "<unknown>";
 			this.file_edit.sub_size = 0;
 			this.file_edit.sub_ctime = 0;
@@ -562,7 +592,8 @@ var appFileView = Vue.component("app-file-view", {
                         sub_mime_type: this.file_edit.sub_mime_type,
 						sub_name: this.file_edit.sub_name,
 						max_hits: this.file_edit.max_hits,
-						ua_bypass: this.file_edit.ua_bypass
+						ua_bypass: this.file_edit.ua_bypass,
+						require_token: this.file_edit.require_token
 					},
 					{
 						headers: {
@@ -586,6 +617,8 @@ var appFileView = Vue.component("app-file-view", {
 						vm.uploads[i].max_hits = f.max_hits;
 						vm.uploads[i].hit_count = f.hit_count;
 						vm.uploads[i].ua_bypass = f.ua_bypass;
+						vm.uploads[i].require_token = f.require_token;
+						vm.uploads[i].access_token = f.access_token;
 					}
 				})
 				.catch(error => {
@@ -602,6 +635,34 @@ var appFileView = Vue.component("app-file-view", {
 						this.uploads.splice(i, 1);
                     }
                     this.syncServerInfo();
+				})
+				.catch(error => {
+					console.log(error);
+				});
+		},
+		copyTokenizedUrl() {
+			var l = window.location;
+			var url = l.protocol + "//" + l.hostname;
+			if (l.port != "" && (l.port != 443 && l.port != 80)) {
+				url += ":" + l.port;
+			}
+			url += escape(this.file_edit.url_path) + "?t=" + encodeURIComponent(this.file_edit.access_token);
+			if (this.$refs.copyToken) {
+				this.$refs.copyToken.setAttribute("data-clipboard-text", url);
+			}
+		},
+		regenerateToken() {
+			var vm = this;
+			var id = this.file_edit.id;
+			axios
+				.post(this.url + "/files/" + id + "/regen_token")
+				.then(response => {
+					var f = response.data.data;
+					vm.file_edit.access_token = f.access_token;
+					var i = vm.findFileIndexById(id);
+					if (i != -1) {
+						vm.uploads[i].access_token = f.access_token;
+					}
 				})
 				.catch(error => {
 					console.log(error);

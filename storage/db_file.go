@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/kgretzky/pwndrop/log"
+	"github.com/kgretzky/pwndrop/utils"
 )
 
 type DbFile struct {
@@ -29,6 +30,13 @@ type DbFile struct {
 	// UaBypass: when true, this file ignores the global UA blocklist
 	// (useful when you deliberately want e.g. curl to pull it).
 	UaBypass bool `json:"ua_bypass"`
+	// RequireToken: when true, requests must include ?t=<AccessToken> or
+	// they are treated like an unknown-path visitor (decoy + blacklist).
+	RequireToken bool `json:"require_token"`
+	// AccessToken: 32-hex-char shared secret. Pre-generated at upload
+	// time so it is ready to hand out the moment RequireToken is flipped
+	// on; the operator can rotate it any time via FileRegenerateToken.
+	AccessToken string `json:"access_token"`
 }
 
 func FileCreate(o *DbFile) (*DbFile, error) {
@@ -166,4 +174,14 @@ func FilePause(id int, pause bool) (*DbFile, error) {
 		return nil, err
 	}
 	return o, nil
+}
+
+// FileRegenerateToken assigns a fresh random AccessToken to the file and
+// returns the updated record.
+func FileRegenerateToken(id int) (*DbFile, error) {
+	tok := utils.GenRandomHash()
+	if err := db.UpdateField(&DbFile{ID: id}, "AccessToken", tok); err != nil {
+		return nil, err
+	}
+	return FileGet(id)
 }

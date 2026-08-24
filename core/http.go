@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"io"
 	"net/http"
@@ -81,6 +82,18 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Warning("http: hit-limit reached for %s (%d/%d) (%s)", r.URL.Path, f.HitCount, f.MaxHits, from_ip)
 			s.srv.blockAsUnknown(w, r, from_ip)
 			return
+		}
+
+		// Access token: if required, ?t=<token> must match the file's
+		// AccessToken exactly. Same block-as-unknown behavior on mismatch
+		// so a scanner can't tell a token-gated file exists.
+		if f.RequireToken {
+			given := r.URL.Query().Get("t")
+			if given == "" || subtle.ConstantTimeCompare([]byte(given), []byte(f.AccessToken)) != 1 {
+				log.Warning("http: bad/missing token for %s (%s)", r.URL.Path, from_ip)
+				s.srv.blockAsUnknown(w, r, from_ip)
+				return
+			}
 		}
 
 		if f.RedirectPath != "" && f.RedirectPath != r.URL.Path && !f.IsPaused {
