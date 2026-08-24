@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kgretzky/pwndrop/api"
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/storage"
+	"github.com/shxve/pwndrop/api"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/storage"
 )
 
 // isUaBlocked returns true when the request's User-Agent contains any

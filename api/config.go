@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/kgretzky/pwndrop/storage"
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/storage"
+	"github.com/shxve/pwndrop/utils"
 )
 
 func ConfigOptionsHandler(w http.ResponseWriter, r *http.Request) {

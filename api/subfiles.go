@@ -9,9 +9,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/storage"
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/storage"
+	"github.com/shxve/pwndrop/utils"
 )
 
 func SubFileCreateHandler(w http.ResponseWriter, r *http.Request) {

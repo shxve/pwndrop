@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/utils"
 )
 
 func GenerateTLSCertificate(common string) (*tls.Certificate, error) {

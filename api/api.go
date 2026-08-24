@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/kgretzky/pwndrop/config"
+	"github.com/shxve/pwndrop/config"
 )
 
 type ApiResponse struct {

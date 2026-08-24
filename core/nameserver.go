@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kgretzky/pwndrop/log"
 	"github.com/miekg/dns"
+	"github.com/shxve/pwndrop/log"
 )
 
 type Nameserver struct {

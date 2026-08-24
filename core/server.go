@@ -14,9 +14,9 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/acme"
 
-	"github.com/kgretzky/pwndrop/api"
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/storage"
+	"github.com/shxve/pwndrop/api"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/storage"
 )
 
 // blockAsUnknown redirects a request to the configured decoy (or 404s) and

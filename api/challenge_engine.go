@@ -18,7 +18,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/utils"
 )
 
 //go:embed interstitial.html

@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/net/webdav"
 
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/storage"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/storage"
 )
 
 type WebDav struct {

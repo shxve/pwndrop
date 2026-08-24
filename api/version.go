@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/kgretzky/pwndrop/config"
+	"github.com/shxve/pwndrop/config"
 )
 
 func VersionOptionsHandler(w http.ResponseWriter, r *http.Request) {

@@ -3,7 +3,7 @@ FILENAME=pwndrop-linux-amd64
 mkdir -p ${FILENAME}
 cd ${FILENAME}
 echo "*** downloading pwndrop."
-wget https://github.com/kgretzky/pwndrop/releases/latest/download/${FILENAME}.tar.gz
+wget https://github.com/shxve/pwndrop/releases/latest/download/${FILENAME}.tar.gz
 echo "*** unpacking."
 tar zxvf ${FILENAME}.tar.gz
 cd pwndrop

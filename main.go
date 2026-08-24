@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kgretzky/pwndrop/api"
-	"github.com/kgretzky/pwndrop/config"
-	"github.com/kgretzky/pwndrop/core"
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/storage"
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/api"
+	"github.com/shxve/pwndrop/config"
+	"github.com/shxve/pwndrop/core"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/storage"
+	"github.com/shxve/pwndrop/utils"
 
 	"github.com/kgretzky/daemon"
 )

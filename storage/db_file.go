@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/kgretzky/pwndrop/log"
-	"github.com/kgretzky/pwndrop/utils"
+	"github.com/shxve/pwndrop/log"
+	"github.com/shxve/pwndrop/utils"
 )
 
 type DbFile struct {

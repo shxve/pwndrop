@@ -1,4 +1,4 @@
-module github.com/kgretzky/pwndrop
+module github.com/shxve/pwndrop
 
 go 1.25.0
 

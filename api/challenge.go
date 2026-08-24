@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/kgretzky/pwndrop/log"
+	"github.com/shxve/pwndrop/log"
 )
 
 // ChallengeSolveHandler receives the PoW nonce and env-probe results from
