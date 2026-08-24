@@ -87,9 +87,18 @@ func (fs *WebDavFS) OpenFile(ctx context.Context, name string, flag int, perm os
 	}
 
 	if !is_dir {
+		// pwndrop serves hosted files read-only over WebDAV. Reject any
+		// write-intent open (e.g. PUT's O_RDWR|O_CREATE|O_TRUNC) *before*
+		// touching the file. Otherwise O_TRUNC would zero the payload on disk
+		// even though WebDavFile.Write refuses the copy afterwards, letting an
+		// unauthenticated client corrupt a hosted file just by knowing its URL.
+		if flag&(os.O_WRONLY|os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
+			log.Error("webdav: refusing write access to '%s'", name)
+			return nil, fmt.Errorf("openfile: write not supported")
+		}
 		data_dir := Cfg.GetDataDir()
 		fpath := filepath.Join(data_dir, "files", f.Filename)
-		wf.fh, err = os.OpenFile(fpath, flag, perm)
+		wf.fh, err = os.OpenFile(fpath, os.O_RDONLY, 0)
 		if err != nil {
 			log.Error("webdav: %s", err)
 			return nil, err

@@ -38,16 +38,24 @@ func NewNameserver(ch_exit *chan bool) (*Nameserver, error) {
 }
 
 func (n *Nameserver) handleRequest(w dns.ResponseWriter, r *dns.Msg) {
+	listen_ip := Cfg.GetListenIP()
+	if listen_ip == "" {
+		return
+	}
+
+	// A malformed query (e.g. QDCOUNT=1 with no question section) reaches
+	// this handler with an empty Question slice. Indexing it would panic, and
+	// because miekg/dns runs handlers in bare goroutines with no recover, that
+	// panic would crash the whole process. Bail out safely instead.
+	if len(r.Question) == 0 {
+		return
+	}
+
 	m := new(dns.Msg)
 	m.SetReply(r)
 
 	qdomain := m.Question[0].Name
-	listen_ip := Cfg.GetListenIP()
 	log.Debug("dns: %s listen_ip: %s", qdomain, listen_ip)
-
-	if Cfg.GetListenIP() == "" {
-		return
-	}
 
 	soa := &dns.SOA{
 		Hdr:     dns.RR_Header{Name: qdomain, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 300},
