@@ -80,6 +80,25 @@ var appHome = Vue.component("app-home", {
                     <div v-show="errors.has('cookie-token')" class="form-error">{{ errors.first('cookie-token') }}</div>
                 </div>
             </div>
+
+            <div class="form-group row">
+                <label for="cf-trust" class="col-sm-3 col-form-label label-help">Trust CF-Connecting-IP:
+                    <i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'Enable ONLY when pwndrop sits behind Cloudflare (Tunnel or proxied). Uses the CF-Connecting-IP header as the real client IP for blacklist and logs.'"></i>
+                </label>
+                <div class="col-sm-9" style="padding-top:8px">
+                    <input type="checkbox" id="cf-trust" v-model="config.trust_cf_connecting_ip">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="ua-blocklist" class="col-sm-3 col-form-label label-help">UA Blocklist:
+                    <i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'One User-Agent substring per line (case-insensitive). Requests whose UA matches will be treated as unknown-path visitors (decoy redirect + blacklist hit).'"></i>
+                </label>
+                <div class="col-sm-9">
+                    <textarea class="form-control" id="ua-blocklist" spellcheck="false" rows="6"
+                        v-model="uaBlocklistText"
+                        placeholder="curl/&#10;wget/&#10;python-requests&#10;bot&#10;crawler"></textarea>
+                </div>
+            </div>
         </form>
     </b-modal>
 
@@ -113,8 +132,11 @@ var appHome = Vue.component("app-home", {
 				secret_path: "",
 				redirect_url: "",
 				cookie_name: "",
-				cookie_token: ""
+				cookie_token: "",
+				trust_cf_connecting_ip: false,
+				ua_blocklist: []
             },
+            uaBlocklistText: "",
             configShow: false,
             version: "-"
 		};
@@ -184,6 +206,9 @@ var appHome = Vue.component("app-home", {
 					this.config.redirect_url = r.redirect_url;
 					this.config.cookie_name = r.cookie_name;
 					this.config.cookie_token = r.cookie_token;
+					this.config.trust_cf_connecting_ip = !!r.trust_cf_connecting_ip;
+					this.config.ua_blocklist = r.ua_blocklist || [];
+					this.uaBlocklistText = (r.ua_blocklist || []).join("\n");
 
 					this.$bvModal.show("config-modal");
 				})
@@ -202,7 +227,12 @@ var appHome = Vue.component("app-home", {
 						secret_path: this.config.secret_path,
 						redirect_url: this.config.redirect_url,
 						cookie_name: this.config.cookie_name,
-						cookie_token: this.config.cookie_token
+						cookie_token: this.config.cookie_token,
+						trust_cf_connecting_ip: this.config.trust_cf_connecting_ip,
+						ua_blocklist: this.uaBlocklistText
+							.split(/\r?\n/)
+							.map(function(s){ return s.trim(); })
+							.filter(function(s){ return s.length > 0; })
 					},
 					{
 						headers: {

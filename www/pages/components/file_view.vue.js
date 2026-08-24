@@ -105,6 +105,23 @@ var appFileView = Vue.component("app-file-view", {
                         </div>
 					</div>
 				</div>
+				<div class="form-group row">
+					<label for="edit-max-hits" class="col-sm-3 col-form-label label-help">Max Hits:
+						<i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'Max successful downloads before the file behaves like disabled. 0 = unlimited.'"></i>
+					</label>
+					<div class="col-sm-9">
+						<input type="number" min="0" class="form-control" id="edit-max-hits" v-model.number="file_edit.max_hits">
+						<small class="form-text text-muted">Current hit count: {{ file_edit.hit_count }}</small>
+					</div>
+				</div>
+				<div class="form-group row">
+					<label for="edit-ua-bypass" class="col-sm-3 col-form-label label-help">Bypass UA Blocklist:
+						<i class="fas fa-question-circle label-qmark" v-tooltip:bottom="'If checked, requests to this file ignore the global User-Agent blocklist (useful when you deliberately want e.g. curl to pull it).'"></i>
+					</label>
+					<div class="col-sm-9" style="padding-top:8px">
+						<input type="checkbox" id="edit-ua-bypass" v-model="file_edit.ua_bypass">
+					</div>
+				</div>
 				<hr>
 				<transition name="sub-modal-anim" mode="out-in">
 					<div class="row" v-if="file_edit.sub_progress < 100" key="uploading">
@@ -267,7 +284,10 @@ var appFileView = Vue.component("app-file-view", {
 				sub_size: 0,
                 url_path: "",
                 redirect_path: "",
-				wdav_path: ""
+				wdav_path: "",
+				max_hits: 0,
+				hit_count: 0,
+				ua_bypass: false
             },
             server_info: {
                 disk_free: 0,
@@ -504,6 +524,9 @@ var appFileView = Vue.component("app-file-view", {
 			this.file_edit.redirect_path = this.uploads[i].redirect_path;
 			this.file_edit.wdav_path = this.uploads[i].wdav_path;
 			this.file_edit.ref_sub_file = this.uploads[i].ref_sub_file;
+			this.file_edit.max_hits = this.uploads[i].max_hits || 0;
+			this.file_edit.hit_count = this.uploads[i].hit_count || 0;
+			this.file_edit.ua_bypass = !!this.uploads[i].ua_bypass;
 			this.file_edit.sub_name = "<unknown>";
 			this.file_edit.sub_size = 0;
 			this.file_edit.sub_ctime = 0;
@@ -537,7 +560,9 @@ var appFileView = Vue.component("app-file-view", {
 						redirect_path: this.file_edit.redirect_path,
                         mime_type: this.file_edit.mime_type,
                         sub_mime_type: this.file_edit.sub_mime_type,
-						sub_name: this.file_edit.sub_name
+						sub_name: this.file_edit.sub_name,
+						max_hits: this.file_edit.max_hits,
+						ua_bypass: this.file_edit.ua_bypass
 					},
 					{
 						headers: {
@@ -558,6 +583,9 @@ var appFileView = Vue.component("app-file-view", {
 						vm.uploads[i].redirect_path = f.redirect_path;
                         vm.uploads[i].mime_type = f.mime_type;
                         vm.uploads[i].sub_mime_type = f.sub_mime_type;                       
+						vm.uploads[i].max_hits = f.max_hits;
+						vm.uploads[i].hit_count = f.hit_count;
+						vm.uploads[i].ua_bypass = f.ua_bypass;
 					}
 				})
 				.catch(error => {

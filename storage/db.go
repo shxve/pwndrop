@@ -55,6 +55,18 @@ func Open(path string) error {
 	return nil
 }
 
+// DefaultUaBlocklist: seeded on fresh installs. Substring match, case-
+// insensitive. Operators can edit the list from the admin panel.
+var DefaultUaBlocklist = []string{
+	"curl/", "wget/", "python-requests", "python-urllib", "go-http-client",
+	"httpclient", "libwww-perl", "okhttp", "java/", "ruby",
+	"scrapy", "masscan", "nmap", "zgrab", "nuclei", "sqlmap",
+	"bot", "crawler", "spider", "slurp", "facebookexternalhit",
+	"slackbot", "discordbot", "telegrambot", "whatsapp", "twitterbot",
+	"bingpreview", "linkedinbot", "embedly", "quora link preview",
+	"vkshare", "outbrain", "pinterest", "developers.google.com/+/web/snippet",
+}
+
 func initConfig() error {
 	o, err := ConfigGet(1)
 	if err != nil {
@@ -64,13 +76,19 @@ func initConfig() error {
 			RedirectUrl: "https://www.youtube.com/watch?v=oHg5SJYRHA0",
 			CookieName:  utils.GenRandomString(4),
 			CookieToken: utils.GenRandomHash(),
+			UaBlocklist: DefaultUaBlocklist,
 		}
 		_, err = ConfigCreate(o)
 		if err != nil {
 			return err
 		}
+	} else if o.UaBlocklist == nil {
+		// existing install upgrading to a version that has this field
+		o.UaBlocklist = DefaultUaBlocklist
+		if _, err := ConfigUpdate(1, o); err != nil {
+			return err
+		}
 	}
 	log.Debug("secret_path: %s", o.SecretPath)
-	// update added values here in future updates
 	return nil
 }

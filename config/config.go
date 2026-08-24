@@ -205,6 +205,22 @@ func (c *Config) GetRedirectUrl() string {
 	return o.RedirectUrl
 }
 
+func (c *Config) GetTrustCfConnectingIP() bool {
+	o, err := storage.ConfigGet(1)
+	if err != nil {
+		return false
+	}
+	return o.TrustCfConnectingIP
+}
+
+func (c *Config) GetUaBlocklist() []string {
+	o, err := storage.ConfigGet(1)
+	if err != nil {
+		return nil
+	}
+	return o.UaBlocklist
+}
+
 func (c *Config) Get(key string) (string, error) {
 	section, err := c.ini.GetSection(INI_SERVER)
 	if err != nil {

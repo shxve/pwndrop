@@ -7,6 +7,14 @@ type DbConfig struct {
 	RedirectUrl string `json:"redirect_url"`
 	CookieName  string `json:"cookie_name"`
 	CookieToken string `json:"cookie_token"`
+	// TrustCfConnectingIP: when true, honor the CF-Connecting-IP request
+	// header as the real client IP (for blacklist/logging). Leave false
+	// unless pwndrop is reachable only via Cloudflare (Tunnel or proxied).
+	TrustCfConnectingIP bool `json:"trust_cf_connecting_ip"`
+	// UaBlocklist: substrings; a request whose User-Agent contains any of
+	// them is treated exactly like an unknown-path visitor (decoy redirect
+	// + blacklist hit) even if it names a real hosted file.
+	UaBlocklist []string `json:"ua_blocklist"`
 }
 
 func ConfigCreate(o *DbConfig) (*DbConfig, error) {

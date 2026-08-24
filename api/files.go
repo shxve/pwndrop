@@ -179,25 +179,46 @@ func FileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file := storage.DbFile{}
-	err = json.NewDecoder(r.Body).Decode(&file)
+	// Fetch the existing record and apply only the fields the client is
+	// allowed to edit. Prevents callers from spoofing IDs, resetting
+	// HitCount, toggling IsEnabled via the wrong endpoint, etc.
+	existing, err := storage.FileGet(id)
 	if err != nil {
+		DumpResponse(w, err.Error(), http.StatusNotFound, API_ERROR_FILE_NOT_FOUND, nil)
+		return
+	}
+
+	in := storage.DbFile{}
+	if err = json.NewDecoder(r.Body).Decode(&in); err != nil {
 		DumpResponse(w, err.Error(), http.StatusBadRequest, API_ERROR_BAD_REQUEST, nil)
 		return
 	}
 
-	if file.UrlPath == "" {
+	if in.UrlPath == "" {
 		DumpResponse(w, "url path cannot be empty", http.StatusBadRequest, API_ERROR_BAD_REQUEST, nil)
 		return
 	}
-	if file.UrlPath[0] != '/' {
-		file.UrlPath = "/" + file.UrlPath
+	if in.UrlPath[0] != '/' {
+		in.UrlPath = "/" + in.UrlPath
 	}
-	if len(file.RedirectPath) > 0 && file.RedirectPath[0] != '/' {
-		file.RedirectPath = "/" + file.RedirectPath
+	if len(in.RedirectPath) > 0 && in.RedirectPath[0] != '/' {
+		in.RedirectPath = "/" + in.RedirectPath
+	}
+	if in.MaxHits < 0 {
+		in.MaxHits = 0
 	}
 
-	f, err := storage.FileUpdate(id, &file)
+	existing.Name = in.Name
+	existing.UrlPath = in.UrlPath
+	existing.RedirectPath = in.RedirectPath
+	existing.MimeType = in.MimeType
+	existing.SubMimeType = in.SubMimeType
+	existing.SubName = in.SubName
+	existing.RefSubFile = in.RefSubFile
+	existing.MaxHits = in.MaxHits
+	existing.UaBypass = in.UaBypass
+
+	f, err := storage.FileUpdate(id, existing)
 	if err != nil {
 		DumpResponse(w, err.Error(), http.StatusInternalServerError, API_ERROR_FILE_DATABASE_FAILED, nil)
 		return

@@ -32,6 +32,7 @@ var appFile = Vue.component("app-file", {
 				<span class="title">{{ file.sub_name }}</span>
 			</div>
 			<div class="d-none d-sm-block col-auto shrink text-right clip">
+				<span v-if="file.max_hits > 0" class="fsize" style="margin-right:8px" v-tooltip:top="'downloads served / max'">{{ file.hit_count || 0 }}/{{ file.max_hits }}</span>
 				<span class="fsize">{{ file.fsize | prettyBytes }}</span>
 			</div>
 			<div class="controls">

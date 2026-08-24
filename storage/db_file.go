@@ -20,6 +20,15 @@ type DbFile struct {
 	SubName      string `json:"sub_name"`
 	SubMimeType  string `json:"sub_mime_type"`
 	RefSubFile   int    `json:"ref_sub_file"`
+	// MaxHits: max successful downloads before the file behaves like
+	// disabled. 0 = unlimited (default).
+	MaxHits int64 `json:"max_hits"`
+	// HitCount: successful downloads served so far. Incremented on each
+	// served GET; not touched for facade/redirect responses.
+	HitCount int64 `json:"hit_count"`
+	// UaBypass: when true, this file ignores the global UA blocklist
+	// (useful when you deliberately want e.g. curl to pull it).
+	UaBypass bool `json:"ua_bypass"`
 }
 
 func FileCreate(o *DbFile) (*DbFile, error) {
@@ -106,13 +115,24 @@ func FileDelete(id int) error {
 }
 
 func FileUpdate(id int, o *DbFile) (*DbFile, error) {
-	if err := db.Update(&DbFile{ID: id, Name: o.Name, UrlPath: o.UrlPath, MimeType: o.MimeType, RefSubFile: o.RefSubFile, SubName: o.SubName, RedirectPath: o.RedirectPath, SubMimeType: o.SubMimeType}); err != nil {
-		return nil, err
-	}
-	if err := db.UpdateField(&DbFile{ID: id}, "RedirectPath", o.RedirectPath); err != nil {
+	// Save the full struct: this preserves zero-value fields (empty
+	// RedirectPath, MaxHits=0, UaBypass=false) that storm.Update would
+	// otherwise skip. Callers are expected to pass a fully-populated
+	// struct (typically FileGet(id) with the desired mutations applied).
+	o.ID = id
+	if err := db.Save(o); err != nil {
 		return nil, err
 	}
 	return o, nil
+}
+
+// FileIncHits atomically-ish (single DB transaction) bumps HitCount by 1.
+func FileIncHits(id int) error {
+	f, err := FileGet(id)
+	if err != nil {
+		return err
+	}
+	return db.UpdateField(&DbFile{ID: id}, "HitCount", f.HitCount+1)
 }
 
 func FileResetSubFile(id int) (*DbFile, error) {

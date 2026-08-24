@@ -19,6 +19,19 @@ import (
 	"github.com/kgretzky/pwndrop/storage"
 )
 
+// blockAsUnknown redirects a request to the configured decoy (or 404s) and
+// counts a blacklist hit against the client. Used for UA / hit-limit blocks
+// so a scanner who guessed a real URL is treated exactly like one who guessed
+// wrong.
+func (s *Server) blockAsUnknown(w http.ResponseWriter, r *http.Request, from_ip string) {
+	s.addBlacklistHit(from_ip)
+	if u := Cfg.GetRedirectUrl(); u != "" {
+		http.Redirect(w, r, u, http.StatusFound)
+		return
+	}
+	s.killConnection(w, http.StatusNotFound)
+}
+
 const (
 	API_PATH = "api/v1"
 )
@@ -141,10 +154,7 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s", r.Method, r.URL.Path)
 
-	from_ip := r.RemoteAddr
-	if host, _, err := net.SplitHostPort(from_ip); err == nil {
-		from_ip = host
-	}
+	from_ip := ClientIP(r)
 
 	if s.isBlacklisted(from_ip) {
 		err := s.killConnection(w, -1)
