@@ -43,8 +43,8 @@ func DumpResponse(w http.ResponseWriter, message string, http_status int, error_
 		http.Error(w, "corrupted response", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http_status)
-	w.Header().Set("content-type", "application/json")
 	w.Write(d)
 }
 

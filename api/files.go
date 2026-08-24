@@ -186,6 +186,10 @@ func FileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if file.UrlPath == "" {
+		DumpResponse(w, "url path cannot be empty", http.StatusBadRequest, API_ERROR_BAD_REQUEST, nil)
+		return
+	}
 	if file.UrlPath[0] != '/' {
 		file.UrlPath = "/" + file.UrlPath
 	}

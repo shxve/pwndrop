@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/subtle"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -105,12 +106,13 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 	s.setupRouter()
 
 	s.srv = &http.Server{
-		Handler:      http.Handler(s),
-		Addr:         hostname,
-		WriteTimeout: 0,
-		ReadTimeout:  0,
-		IdleTimeout:  5 * time.Second,
-		TLSConfig:    tls_cfg,
+		Handler:           http.Handler(s),
+		Addr:              hostname,
+		WriteTimeout:      0,
+		ReadTimeout:       0,
+		ReadHeaderTimeout: 60 * time.Second,
+		IdleTimeout:       5 * time.Second,
+		TLSConfig:         tls_cfg,
 	}
 
 	s.listenTLS, err = tls.Listen("tcp", hostname_tls, tls_cfg)
@@ -148,6 +150,8 @@ func NewServer(host string, port_plain int, port_tls int, enable_letsencrypt boo
 		}
 	}()
 
+	go s.cleanupBlacklist()
+
 	return s, nil
 }
 
@@ -155,8 +159,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s", r.Method, r.URL.Path)
 
 	from_ip := r.RemoteAddr
-	if strings.Contains(from_ip, ":") {
-		from_ip = strings.Split(from_ip, ":")[0]
+	if host, _, err := net.SplitHostPort(from_ip); err == nil {
+		from_ip = host
 	}
 
 	if s.isBlacklisted(from_ip) {
@@ -181,6 +185,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Path:     "/",
 				Expires:  time.Now().AddDate(0, 3, 0),
 				HttpOnly: true,
+				SameSite: http.SameSiteStrictMode,
 				Name:     cookie_name,
 				Value:    cookie_token,
 			}
@@ -191,7 +196,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		if !s.FileExists(r.URL.Path) {
 			if ck, err := r.Cookie(cookie_name); err == nil {
-				if ck.Value == cookie_token {
+				if subtle.ConstantTimeCompare([]byte(ck.Value), []byte(cookie_token)) == 1 {
 					s.r.ServeHTTP(w, r)
 					return
 				}
@@ -207,7 +212,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// http
 		s.http.ServeHTTP(w, r)
 	} else {
-		// webdav
+		// webdav: hosted files are intentionally reachable without the secret
+		// cookie, but throttle blind path probing the same way the HTTP path
+		// does, so WebDAV can't be abused to enumerate around the blacklist.
+		if !s.FileExists(r.URL.Path) && !storage.FileDirExists(r.URL.Path) {
+			s.addBlacklistHit(from_ip)
+		}
 		s.wdav.Handler().ServeHTTP(w, r)
 	}
 }
@@ -351,5 +361,21 @@ func (s *Server) addBlacklistHit(ip_addr string) {
 			last_hit: time.Now(),
 		}
 		s.blacklist[ip_addr] = bl
+	}
+}
+
+// cleanupBlacklist periodically drops stale blacklist entries so the map can't
+// grow without bound from one-off scanners that never reach the hit limit.
+func (s *Server) cleanupBlacklist() {
+	for {
+		time.Sleep(BLACKLIST_JAIL_TIME_SECS * time.Second)
+		s.bl_mtx.Lock()
+		cutoff := time.Now().Add(-BLACKLIST_JAIL_TIME_SECS * time.Second)
+		for ip, bl := range s.blacklist {
+			if bl.last_hit.Before(cutoff) {
+				delete(s.blacklist, ip)
+			}
+		}
+		s.bl_mtx.Unlock()
 	}
 }

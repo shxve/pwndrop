@@ -73,8 +73,9 @@ func NewConfig(path string) (*Config, error) {
 func (c *Config) HandleSetup() error {
 	if _, err := c.ini.GetSection(INI_SETUP); err == nil {
 		o, err := storage.ConfigGet(1)
-		if err != nil {
-			log.Error("config: can't get config from db")
+		if err != nil || o == nil {
+			log.Error("config: can't get config from db: %v", err)
+			return err
 		}
 
 		var username, password, redirect_url, secret_path string
@@ -92,14 +93,16 @@ func (c *Config) HandleSetup() error {
 		}
 		if k, err := c.ini.Section(INI_SETUP).GetKey(INI_SETUP_SECRET_PATH); err == nil {
 			secret_path = k.String()
-			if secret_path[0] != '/' {
-				secret_path = "/" + secret_path
-			}
-			if len(secret_path) >= 2 {
-				o.CookieName = utils.GenRandomString(4)
-				o.CookieToken = utils.GenRandomHash()
-				o.SecretPath = secret_path
-				log.Important("setup: secret path set to: %s", secret_path)
+			if len(secret_path) > 0 {
+				if secret_path[0] != '/' {
+					secret_path = "/" + secret_path
+				}
+				if len(secret_path) >= 2 {
+					o.CookieName = utils.GenRandomString(4)
+					o.CookieToken = utils.GenRandomHash()
+					o.SecretPath = secret_path
+					log.Important("setup: secret path set to: %s", secret_path)
+				}
 			}
 		}
 

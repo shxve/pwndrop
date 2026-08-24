@@ -103,6 +103,7 @@ func LoginUserHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   24 * 60 * 60,
 		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
 		Name:     AUTH_COOKIE_NAME,
 		Value:    token,
 	}

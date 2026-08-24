@@ -3,10 +3,10 @@ package core
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/kgretzky/pwndrop/log"
@@ -35,8 +35,8 @@ func (s *Http) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data_dir := Cfg.GetDataDir()
 
 	from_ip := r.RemoteAddr
-	if strings.Contains(from_ip, ":") {
-		from_ip = strings.Split(from_ip, ":")[0]
+	if host, _, err := net.SplitHostPort(from_ip); err == nil {
+		from_ip = host
 	}
 
 	if r.Method == "GET" {
