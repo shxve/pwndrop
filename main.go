@@ -98,7 +98,11 @@ func main() {
 	db_path := filepath.Join(core.Cfg.GetDataDir(), "pwndrop.db")
 	log.Info("opening database at: %s", db_path)
 
-	storage.Open(db_path)
+	if err = storage.Open(db_path); err != nil {
+		log.Fatal("failed to open database: %v", err)
+		os.Exit(1)
+		return
+	}
 	core.Cfg.HandleSetup()
 	if err = core.Cfg.Save(); err != nil {
 		log.Fatal("config: %v", err)

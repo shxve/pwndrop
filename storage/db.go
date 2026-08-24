@@ -15,7 +15,7 @@ var db *storm.DB
 func Open(path string) error {
 	var err error
 
-	err = os.MkdirAll(filepath.Dir(path), 0600)
+	err = os.MkdirAll(filepath.Dir(path), 0700)
 	if err != nil {
 		return err
 	}
